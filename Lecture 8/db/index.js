@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import { DB_NAME } from "../src/constants.js"; // Note: Add .js extension if using native ES modules
 
 // Load environment variables
-dotenv.config();
+
 
 const connectDB = async () => {
     try {
