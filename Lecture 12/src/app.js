@@ -1,22 +1,28 @@
-require("dotenv").config({ path: "./env" });
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import dotenv from "dotenv";
 
-import cookieparser from "cookie-parser";
-export const app = express();
-// connectDB()
-// .then( () => {
+import userroute from "../routes/user.routes.js";
 
-// })
-// .catch(err){
-//     console.log(err)
+dotenv.config({
+    path: "./.env",
+});
+
+const app = express();
+
 app.use(
-	cors({
-		origin: process.env.CORS_ORIGIN,
-		credentials: true,
-	}),
+    cors({
+        origin: process.env.CORS_ORIGIN,
+        credentials: true,
+    })
 );
 
 app.use(express.json({ limit: "16kb" }));
-app.use(express.urlencoded({ limit: "16kb", extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
-app.use(cookieparser());
-// }
+app.use(cookieParser());
+
+app.use("/api/v1/users", userroute);
+
+export { app };
