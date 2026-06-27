@@ -8,14 +8,16 @@ const userschema = new mongoose.Schema(
 		username: {
 			type: String,
 			required: true,
-			lower: true,
+			unique: true,
+			lowercase: true,
 			trim: true,
 			index: true,
 		},
 		email: {
 			type: String,
 			required: true,
-			lower: true,
+			unique: true,
+			lowercase: true,
 			trim: true,
 		},
 		fullname: {
@@ -57,8 +59,8 @@ userschema.pre("save", async function (next) {
 userschema.methods.ispasswordcorrect = async function (password) {
 	return await bcrypt.compare(password, this.password);
 };
-userschema.methods.generateaccesstoken = async function () {
-	return await jwt.sign(
+userschema.methods.generateaccesstoken = function () {
+	return jwt.sign(
 		{
 			_id: this._id,
 			username: this.username,
@@ -67,20 +69,22 @@ userschema.methods.generateaccesstoken = async function () {
 		},
 		process.env.ACCESS_TOKEN_SECRET,
 		{
-			expiresin: process.env.ACCESS_TOKEN_SECRET,
+			expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
 		},
 	);
 };
 
-userschema.methods.generateaccesstoken = async function () {
-	return await jwt.sign(
+userschema.methods.generaterefreshtoken = function () {
+	return jwt.sign(
 		{
 			_id: this._id,
 		},
 		process.env.REFRESH_TOKEN_SECRET,
 		{
-			expiresin: process.env.REFRESH_TOKEN_SECRET,
+			expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
 		},
 	);
 };
-export const user = mongoose.model("user", userschema);
+
+const user = mongoose.model("user", userschema);
+export default user;

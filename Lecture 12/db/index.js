@@ -1,11 +1,5 @@
-import dotenv from "dotenv";
-
-dotenv.config();
-
 import mongoose from "mongoose";
-import { DB_NAME } from "../src/constants.js"; // Note: Add .js extension if using native ES modules
-
-// Load environment variables
+import { DB_NAME } from "../src/constants.js";
 
 const connectDB = async () => {
 	try {

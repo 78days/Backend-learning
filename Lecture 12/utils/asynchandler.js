@@ -6,6 +6,7 @@ const asynchandler = (func) => async (req, res, next) => {
 		return res.status(statusCode).json({
 			success: false,
 			message: error?.message || "Internal Server Error",
+			errors: error?.errors || [],
 		});
 	}
 };

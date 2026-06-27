@@ -1,8 +1,7 @@
-class apierrorhandler extends Error {
+export class apierrorhandler extends Error {
 	constructor(
+		statuscode = 500,
 		message = "error message in apierror",
-		statuscode = 0,
-		stack = [],
 		errors = [],
 	) {
 		super(message);
