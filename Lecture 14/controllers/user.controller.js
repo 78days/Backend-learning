@@ -42,7 +42,7 @@ export const registeruser = asynchandler(async (req, res) => {
 		.findById(userresponse._id)
 		.select("-password -refreshtoken");
 	if (!usercreated) throw new apierrorhandler(500, "server error");
-
+	//console.log(req.files)
 	return res
 		.status(201)
 		.json(new apiresponse(201, usercreated, "user created successfully"));
