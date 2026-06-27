@@ -1,9 +1,12 @@
+//import user from "../models/user.model.js";
+
+import jwt from "jsonwebtoken";
 import user from "../models/user.model.js";
+import { _Options } from "../src/constants.js";
 import { apierrorhandler } from "../utils/apierror.js";
 import { apiresponse } from "../utils/apiresponse.js";
 import asynchandler from "../utils/asynchandler.js";
 import { fileupload } from "../utils/cloudinary.js";
-
 export const generateaccessandrefreshtoken = async (userid) => {
 	try {
 		const founduser = await user.findById(userid);
@@ -72,14 +75,11 @@ export const logoutuser = asynchandler(async (req, res) => {
 			new: true,
 		},
 	);
-	const options = {
-		httpOnly: true,
-		secure: true,
-	};
+
 	return res
 		.status(200)
-		.clearCookie("accesstoken", options)
-		.clearCookie("refreshtoken", options)
+		.clearCookie("accesstoken", _Options)
+		.clearCookie("refreshtoken", _Options)
 		.json(new apiresponse(200, {}, "user logged out"));
 });
 
@@ -100,14 +100,11 @@ export const loginuser = asynchandler(async (req, res) => {
 	const loggedinuser = await user
 		.findById(usercheck._id)
 		.select("-password -refreshtoken");
-	const options = {
-		httpOnly: true,
-		secure: true,
-	};
+
 	return res
 		.status(200)
-		.cookie("accesstoken", accesstoken, options)
-		.cookie("refreshtoken", refreshtoken, options)
+		.cookie("accesstoken", accesstoken, _Options)
+		.cookie("refreshtoken", refreshtoken, _Options)
 		.json(
 			new apiresponse(
 				200,
@@ -119,4 +116,41 @@ export const loginuser = asynchandler(async (req, res) => {
 				"user logged in successfully",
 			),
 		);
+});
+
+export const accessrefreshtoken = asynchandler(async (req, res) => {
+	const incomingrefreshtoken =
+		req.body.refreshtoken || req.cookies.refreshtoken;
+	if (!incomingrefreshtoken) throw new apierrorhandler(401, "no refresh token");
+	try {
+		const decodedtoken = jwt.verify(
+			incomingrefreshtoken,
+			process.env.REFRESH_TOKEN_SECRET,
+		);
+
+		const uusertokenfromdb = user.findById(decodedtoken?._id);
+		if (!uuser) throw new apierrorhandler(401, "invalid token");
+
+		if (uusertokenfromdb !== decodedtoken)
+			throw new apierrorhandler("401", "invalid token");
+		const { accesstoken, refreshtoken } = await generateaccessandrefreshtoken(
+			uuser._id,
+		);
+		return res
+			.status(200)
+			.cookie("accesstoken", accesstoken, _Options)
+			.cookie("refreshtoken", refreshtoken, _Options)
+			.json(
+				new apiresponse(
+					200,
+					{
+						accesstoken: accesstoken,
+						refreshtoken: refreshtoken,
+					},
+					"access and refresh token generated successfully",
+				),
+			);
+	} catch (error) {
+		throw new apierrorhandler(401, error?.message || "invalid refresh token ");
+	}
 });
