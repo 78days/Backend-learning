@@ -7,6 +7,7 @@ import { apierrorhandler } from "../utils/apierror.js";
 import { apiresponse } from "../utils/apiresponse.js";
 import asynchandler from "../utils/asynchandler.js";
 import { fileupload } from "../utils/cloudinary.js";
+
 export const generateaccessandrefreshtoken = async (userid) => {
 	try {
 		const founduser = await user.findById(userid);
@@ -88,7 +89,10 @@ export const loginuser = asynchandler(async (req, res) => {
 	if ((!username && !email) || !password)
 		throw new apierrorhandler(400, "username or email is required");
 	const usercheck = await user.findOne({
-		$or: [{ username }, { email }],
+		$or: [
+			{ username: username?.toLowerCase() },
+			{ email: email?.toLowerCase() },
+		],
 	});
 	if (!usercheck) throw new apierrorhandler(404, "user does not exist");
 	const ispasswordvalid = await usercheck.ispasswordcorrect(password);
@@ -128,13 +132,13 @@ export const accessrefreshtoken = asynchandler(async (req, res) => {
 			process.env.REFRESH_TOKEN_SECRET,
 		);
 
-		const uusertokenfromdb = user.findById(decodedtoken?._id);
-		if (!uuser) throw new apierrorhandler(401, "invalid token");
+		const usertokenfromdb = await user.findById(decodedtoken?._id);
+		if (!usertokenfromdb) throw new apierrorhandler(401, "invalid token");
 
-		if (uusertokenfromdb !== decodedtoken)
-			throw new apierrorhandler("401", "invalid token");
+		if (incomingrefreshtoken !== usertokenfromdb?.refreshtoken)
+			throw new apierrorhandler(401, "invalid token");
 		const { accesstoken, refreshtoken } = await generateaccessandrefreshtoken(
-			uuser._id,
+			usertokenfromdb._id,
 		);
 		return res
 			.status(200)
@@ -153,4 +157,107 @@ export const accessrefreshtoken = asynchandler(async (req, res) => {
 	} catch (error) {
 		throw new apierrorhandler(401, error?.message || "invalid refresh token ");
 	}
+});
+
+export const changepassword = asynchandler(async (req, res) => {
+	const { oldpassword, newpassword } = req.body;
+	if (!oldpassword || !newpassword)
+		throw new apierrorhandler(400, "all fields are required");
+
+	const userid = await user.findById(req.user?._id);
+	if (!userid) throw new apierrorhandler(404, "user not found");
+
+	const ispasswordcorr = await userid.ispasswordcorrect(oldpassword);
+	if (!ispasswordcorr) throw new apierrorhandler(401, "wrong password");
+	userid.password = newpassword;
+	await userid.save({ validateBeforeSave: false });
+	return res
+		.status(200)
+		.json(new apiresponse(200, {}, "password changed successfully"));
+});
+
+export const getcurrentuser = asynchandler(async (req, res) => {
+	return res
+		.status(200)
+		.json(new apiresponse(200, req?.user, "user get successfully"));
+});
+
+export const updateuser = asynchandler(async (req, res) => {
+	const { fullname, email } = req.body;
+	if (!fullname || !username)
+		throw new apierrorhandler(401, "enter  both email and fullname");
+	const User = user.findByIdAndUpdate(
+		req?.user?._id,
+		{
+			$set: {
+				fullname,
+				email: email,
+			},
+		},
+		{ new: true },
+	);
+	return res
+		.status(200)
+		.json(
+			new apiresponse(
+				200,
+				User.select("-password"),
+				"user updated successfully",
+			),
+		);
+});
+
+export const updateavater = asynchandler(async (req, res) => {
+	const avaterfilepath = req.file?.path;
+	if (!avaterfilepath) throw new apierrorhandler(401, "avatar not uploaded");
+	const avatarresponse = fileupload(avaterfilepath);
+	if (!avatarresponse)
+		throw new apierrorhandler(501, "avatar not uploaded on cloudinary");
+
+	const User = user.findByIdAndUpdate(
+		req?.user?._id,
+		{
+			$set: {
+				avatar: avatarresponse.url,
+			},
+		},
+		{ new: true },
+	);
+	return res
+		.status(200)
+		.json(
+			new apiresponse(
+				200,
+				User.select("-password"),
+				"avatar updated successfully",
+			),
+		);
+});
+
+export const updatecoverimage = asynchandler(async (req, res) => {
+	const coverimagefilepath = req.file?.path;
+	if (!coverimagefilepath)
+		throw new apierrorhandler(401, "cover image not uploaded");
+	const coverimagerespone = fileupload(coverimagefilepath);
+	if (!coverimagerespone)
+		throw new apierrorhandler(501, "cover image not uploaded on cloudinary");
+
+	const User = user.findByIdAndUpdate(
+		req?.user?._id,
+		{
+			$set: {
+				coverimage: coverimagerespone.url,
+			},
+		},
+		{ new: true },
+	);
+	return res
+		.status(200)
+		.json(
+			new apiresponse(
+				200,
+				User.select("-password"),
+				"cover image updated successfully",
+			),
+		);
 });
